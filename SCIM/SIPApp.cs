@@ -5,6 +5,7 @@ using System.Net;
 using System.Net.Sockets;
 using SIPLib.SIP;
 using SIPLib.Utils;
+using SIPLib.src.SIP;
 using log4net;
 using Timer = SIPLib.SIP.Timer;
 
@@ -117,11 +118,11 @@ namespace SCIM
 
         public override UserAgent CreateServer(Message request, SIPURI uri, SIPStack stack)
         {
-            if (request.Method == "INVITE")
+            if (request.Method != "CANCEL")
             {
-                return new UserAgent(Stack, request);
+                return new Proxy(Stack, request,true);
             }
-            return null;
+            else return null;
         }
 
         public override void Sending(UserAgent ua, Message message, SIPStack stack)

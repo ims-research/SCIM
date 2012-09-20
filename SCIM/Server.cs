@@ -2,6 +2,7 @@
 using System.Net;
 using SIPLib.SIP;
 using SIPLib.Utils;
+using SIPLib.src.SIP;
 using log4net;
 
 namespace SCIM
@@ -48,7 +49,12 @@ namespace SCIM
         {
             Log.Info("Request Received:" + e.Message);
             Message request = e.Message;
-            switch (request.Method.ToUpper())
+            Proxy pua = (Proxy)(e.UA);
+            Address dest = new Address("<sip:voicemail@open-ims.test>");
+            Message proxiedMessage = pua.CreateRequest(e.Message.Method, dest, false);
+            //proxiedMessage.First("To").Value = dest;
+            pua.SendRequest(proxiedMessage);
+            /*switch (request.Method.ToUpper())
             {
                 case "MESSAGE":
                     {
@@ -73,7 +79,7 @@ namespace SCIM
                         Log.Info("Request with method " + request.Method.ToUpper() + " is unhandled");
                         break;
                     }
-            }
+            }*/
         }
 
         static void Main(string[] args)
