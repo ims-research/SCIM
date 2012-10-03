@@ -51,8 +51,8 @@ namespace SCIM
             Message request = e.Message;
             Proxy pua = (Proxy)(e.UA);
             Address dest = new Address("<sip:voicemail@open-ims.test>");
-            Message proxiedMessage = pua.CreateRequest(e.Message.Method, dest, false);
-            //proxiedMessage.First("To").Value = dest;
+            Message proxiedMessage = pua.CreateRequest(e.Message.Method, dest, true,true);
+            proxiedMessage.First("To").Value = dest;
             pua.SendRequest(proxiedMessage);
             /*switch (request.Method.ToUpper())
             {
@@ -90,7 +90,9 @@ namespace SCIM
             _app.ResponseRecvEvent += new EventHandler<SipMessageEventArgs>(AppResponseRecvEvent);
             const string scscfIP = "scscf.open-ims.test";
             const int scscfPort = 6060;
-            SIPStack stack = CreateStack(_app, scscfIP, scscfPort);
+            //SIPStack stack = CreateStack(_app, scscfIP, scscfPort);
+            //Disable sending to SCSCF first
+            SIPStack stack = CreateStack(_app);
             stack.Uri = new SIPURI("scim@open-ims.test");
             Console.ReadKey();
         }

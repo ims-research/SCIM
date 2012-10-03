@@ -218,7 +218,7 @@ namespace SCIM
             }
             else
             {
-                Log.Error("CallID cannot be Null or Emtpy in EndCall");
+                Log.Error("CallID cannot be Null or Empty in EndCall");
             }
         }
 
