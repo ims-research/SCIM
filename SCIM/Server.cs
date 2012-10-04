@@ -50,36 +50,27 @@ namespace SCIM
             Log.Info("Request Received:" + e.Message);
             Message request = e.Message;
             Proxy pua = (Proxy)(e.UA);
-            Address dest = new Address("<sip:voicemail@open-ims.test>");
-            Message proxiedMessage = pua.CreateRequest(e.Message.Method, dest, true,true);
-            proxiedMessage.First("To").Value = dest;
+            RouteMessage(request,pua);
+        }
+
+        private static void RouteMessage(Message request, Proxy pua)
+        {
+            SIPURI to = request.Uri;
+            Address from = (Address)(request.First("From").Value);
+            //Retrieve both user's list of preferences from above value
+            //Check from and to for any matches (check to's list for from, and from's list for to)
+            string method = request.Method;
+            //Check any invites for both parties
+            
+            //if found (such as voicemail redirect) do
+            //Address dest = new Address("<sip:voicemail@open-ims.test>");
+            //Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
+            //proxiedMessage.First("To").Value = dest;
+            
+            // If not found carry on as usual
+            Address dest = new Address(to.ToString());
+            Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
             pua.SendRequest(proxiedMessage);
-            /*switch (request.Method.ToUpper())
-            {
-                case "MESSAGE":
-                    {
-                        IMLog.Info(request.First("From") + " says " + request.Body);
-                        _app.Useragents.Add(e.UA);
-                        Message m = e.UA.CreateResponse(200, "OK");
-                        e.UA.SendResponse(m);
-                        break;
-                    }
-                case "INVITE":
-                case "ACK":
-                case "BYE":
-                case "CANCEL":
-                case "OPTIONS":
-                case "REFER":
-                case "SUBSCRIBE":
-                case "NOTIFY":
-                case "PUBLISH":
-                case "INFO":
-                default:
-                    {
-                        Log.Info("Request with method " + request.Method.ToUpper() + " is unhandled");
-                        break;
-                    }
-            }*/
         }
 
         static void Main(string[] args)
