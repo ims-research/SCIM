@@ -47,10 +47,25 @@ namespace SCIM
 
         static void AppRequestRecvEvent(object sender, SipMessageEventArgs e)
         {
-            Log.Info("Request Received:" + e.Message);
             Message request = e.Message;
-            Proxy pua = (Proxy)(e.UA);
-            RouteMessage(request,pua);
+            Log.Info("Request Received:" + e.Message);
+            switch (request.Method.ToUpper())
+            {
+                case "INVITE":
+                    {
+                        Proxy pua = (Proxy)(e.UA);
+                        RouteMessage(request, pua);
+                        break;
+                    }
+                case "MESSAGE":
+                    {
+                        _app.Useragents.Add(e.UA);
+                        Log.Info("Presence status message received:" + e.Message.Body);
+                        Message m = e.UA.CreateResponse(200, "OK");
+                        e.UA.SendResponse(m);
+                        break;
+                    }
+            }
         }
 
         private static void RouteMessage(Message request, Proxy pua)
