@@ -32,7 +32,7 @@ namespace SCIM
         public SIPApp(TransportInfo transport)
         {
             log4net.Config.XmlConfigurator.Configure();
-            TempBuffer = new byte[4096];
+            TempBuffer = new byte[20000];
             transport.Socket = transport.Type == ProtocolType.Tcp ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) : new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             IPEndPoint localEP = new IPEndPoint(transport.Host, transport.Port);
             transport.Socket.Bind(localEP);

@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using SIPLib.SIP;
 using SIPLib.Utils;
 using SIPLib.src.SIP;
+using USPS.Code;
 using log4net;
 
 namespace SCIM
@@ -60,12 +62,35 @@ namespace SCIM
                 case "MESSAGE":
                     {
                         _app.Useragents.Add(e.UA);
-                        Log.Info("Presence status message received:" + e.Message.Body);
                         Message m = e.UA.CreateResponse(200, "OK");
                         e.UA.SendResponse(m);
+                        string contentType = request.First("Content-Type").ToString().ToUpper();
+                        string to = request.First("To").ToString().ToUpper();
+                        if (to.Contains("SCIM"))
+                        {
+                            ProcessSIPMessage(contentType, e.Message.Body);
+                        }
                         break;
                     }
             }
+        }
+
+        private static void ProcessSIPMessage(string type, string message)
+        {
+            if (type.Equals("APPLICATION/SERV_DESC+XML"))
+            {
+                string[] lines = message.Split('\n');
+                List<List<ServiceFlow>> receivedchains = new List<List<ServiceFlow>>();
+                foreach (string line in lines)
+                {
+                    receivedchains.Add(message.Deserialize<List<ServiceFlow>>());
+                }
+            }
+            else if (type.Equals(""))
+            {
+                
+            }
+            else Log.Error("Unhandled Message type of ");
         }
 
         private static void RouteMessage(Message request, Proxy pua)
@@ -76,12 +101,12 @@ namespace SCIM
             //Check from and to for any matches (check to's list for from, and from's list for to)
             string method = request.Method;
             //Check any invites for both parties
-            
+
             //if found (such as voicemail redirect) do
             //Address dest = new Address("<sip:voicemail@open-ims.test>");
             //Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
             //proxiedMessage.First("To").Value = dest;
-            
+
             // If not found carry on as usual
             Address dest = new Address(to.ToString());
             Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
