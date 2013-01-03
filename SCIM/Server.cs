@@ -4,7 +4,6 @@ using System.Net;
 using SIPLib.SIP;
 using SIPLib.Utils;
 using SIPLib.src.SIP;
-using USPS.Code;
 using log4net;
 
 namespace SCIM
@@ -90,7 +89,7 @@ namespace SCIM
             {
                 
             }
-            else Log.Error("Unhandled Message type of ");
+            else Log.Error("Unhandled Message type of " + type);
         }
 
         private static void RouteMessage(Message request, Proxy pua)

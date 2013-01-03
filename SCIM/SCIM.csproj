@@ -63,12 +63,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Condition.cs" />
+    <Compile Include="ConditionNode.cs" />
+    <Compile Include="ConditionValueNode.cs" />
+    <Compile Include="D3Node.cs" />
+    <Compile Include="Node.cs" />
     <Compile Include="SerializationExtensions.cs" />
     <Compile Include="Server.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Service.cs" />
     <Compile Include="ServiceBlock.cs" />
     <Compile Include="ServiceFlow.cs" />
+    <Compile Include="ServiceNode.cs" />
+    <Compile Include="Service_Manager.cs" />
     <Compile Include="SIPApp.cs" />
+    <Compile Include="SIPResponseNode.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Libs\log4net.dll" />
