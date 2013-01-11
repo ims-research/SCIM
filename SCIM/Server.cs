@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using LibServiceInfo;
 using SIPLib.SIP;
 using SIPLib.Utils;
 using SIPLib.src.SIP;
@@ -79,15 +80,15 @@ namespace SCIM
             if (type.Equals("APPLICATION/SERV_DESC+XML"))
             {
                 string[] lines = message.Split('\n');
-                List<List<ServiceFlow>> receivedchains = new List<List<ServiceFlow>>();
+                Dictionary<String, List<ServiceFlow>> receivedchains = new Dictionary<string, List<ServiceFlow>>();
                 foreach (string line in lines)
                 {
-                    receivedchains.Add(message.Deserialize<List<ServiceFlow>>());
+                    Dictionary<String, List<ServiceFlow>> flows = line.Deserialize<Dictionary<String, List<ServiceFlow>>>();
+                    if (flows.Count > 0)
+                    {
+                        
+                    }
                 }
-            }
-            else if (type.Equals(""))
-            {
-                
             }
             else Log.Error("Unhandled Message type of " + type);
         }
