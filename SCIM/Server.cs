@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using LibServiceInfo;
 using SIPLib.SIP;
@@ -13,6 +14,8 @@ namespace SCIM
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(SIPApp));
         private static readonly ILog IMLog = LogManager.GetLogger("SCIMLogger");
+        private static Dictionary<String,List<ServiceFlow>> _chains = new Dictionary<string, List<ServiceFlow>>();
+        private static Dictionary<string, Dictionary<string, string>> _context = new Dictionary<string, Dictionary<string, string>>();
 
         private static SIPApp _app;
         public static SIPStack CreateStack(SIPApp app, string proxyIp = null, int proxyPort = -1)
@@ -80,14 +83,24 @@ namespace SCIM
             if (type.Equals("APPLICATION/SERV_DESC+XML"))
             {
                 string[] lines = message.Split('\n');
-                Dictionary<String, List<ServiceFlow>> receivedchains = new Dictionary<string, List<ServiceFlow>>();
+                Dictionary<String, List<ServiceFlow>> receivedchains = message.Deserialize<Dictionary<string, List<ServiceFlow>>>();
+                foreach (var src in receivedchains)
+                {
+                    _chains[src.Key] = src.Value;
+                }
+            }// Fix to use proper application/pidf+xml
+            else if (type.Equals("TEXT/PLAIN"))
+            {
+                string[] lines = message.Split('\n');
+                //alice@open-ims.test:open
                 foreach (string line in lines)
                 {
-                    Dictionary<String, List<ServiceFlow>> flows = line.Deserialize<Dictionary<String, List<ServiceFlow>>>();
-                    if (flows.Count > 0)
-                    {
-                        
-                    }
+                    string[] parts = line.Split(':');
+                    string user = parts[0];
+                    string contextType = parts[1];
+                    string value = parts[2];
+                    if (!_context.ContainsKey(user)) _context[user] = new Dictionary<string, string>();
+                    _context[user][contextType] = value;
                 }
             }
             else Log.Error("Unhandled Message type of " + type);
