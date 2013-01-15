@@ -106,10 +106,57 @@ namespace SCIM
             else Log.Error("Unhandled Message type of " + type);
         }
 
+
+        private static void FetchContexts(string toID, string fromID, out Dictionary<string, string> toUserContext, out Dictionary<string, string> fromUserContext)
+        {
+            if (_context.ContainsKey(toID))
+            {
+                toUserContext = _context[toID];
+            }
+            
+            if (_context.ContainsKey(fromID))
+            {
+                fromUserContext = _context[fromID];
+            }
+        }
+
+        private static void FetchServiceBlocks(string toID, string fromID, out List<ServiceFlow> toUserFlows, out List<ServiceFlow> fromUserFlows)
+        {
+            if (_chains.ContainsKey(toID))
+            {
+                toUserFlows = _chains[toID];
+            }
+
+            if (_chains.ContainsKey(fromID))
+            {
+                fromUserFlows = _chains[fromID];
+            }
+        }
+
         private static void RouteMessage(Message request, Proxy pua)
         {
+            
             SIPURI to = request.Uri;
+            string toID = to.User + "@" + to.Host;
             Address from = (Address)(request.First("From").Value);
+            string fromID = from.Uri.User + "@" + from.Uri.Host;
+            Dictionary<string, string> toUserContext = new Dictionary<string, string>();
+            Dictionary<string, string> fromUserContext = new Dictionary<string, string>();
+            FetchContexts(toID, fromID,out toUserContext,out fromUserContext);
+            List<ServiceFlow> toUserFlows = new List<ServiceFlow>();
+            List<ServiceFlow> fromUserFlows = new List<ServiceFlow>();
+            FetchServiceBlocks(toID, fromID, out toUserFlows, out fromUserFlows);
+            Address dest = new Address(to.ToString());
+
+            foreach (ServiceFlow serviceFlow in toUserFlows)
+            {
+                ServiceBlock firstBlock = serviceFlow.Blocks[serviceFlow.FirstBlockGUID];
+                if (CheckServiceBlock(request, firstBlock, toID, fromID, toUserContext, fromUserContext, out dest))
+                {
+                    break;
+                }
+            }
+
             //Retrieve both user's list of preferences from above value
             //Check from and to for any matches (check to's list for from, and from's list for to)
             string method = request.Method;
@@ -121,9 +168,19 @@ namespace SCIM
             //proxiedMessage.First("To").Value = dest;
 
             // If not found carry on as usual
-            Address dest = new Address(to.ToString());
+            //Address dest = new Address(to.ToString());
+            //Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
+            //pua.SendRequest(proxiedMessage);
+
             Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
+            proxiedMessage.First("To").Value = dest;
             pua.SendRequest(proxiedMessage);
+            
+        }
+
+        private static bool CheckServiceBlock(Message request, ServiceBlock firstBlock, string toId, string fromId, Dictionary<string, string> toUserContext, Dictionary<string, string> fromUserContext, out Address dest)
+        {
+            throw new NotImplementedException();
         }
 
         static void Main(string[] args)
