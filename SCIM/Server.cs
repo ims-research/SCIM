@@ -137,11 +137,17 @@ namespace SCIM
 
             foreach (ServiceFlow serviceFlow in toUserFlows)
             {
-                Block firstBlock = serviceFlow.Blocks[serviceFlow.FirstBlockGUID];
-                if (CheckServiceBlock(request, firstBlock, toID, fromID, toUserContext, fromUserContext, out dest))
+                if (serviceFlow.Blocks.Count > 0)
                 {
-                    break;
+                    Block firstBlock = serviceFlow.Blocks[serviceFlow.FirstBlockGUID];
+                    Address temp_dest = CheckServiceBlock(request, firstBlock, toID, fromID);
+                    if (temp_dest != null)
+                    {
+                        dest = temp_dest;
+                        break;
+                    }
                 }
+                else continue;
             }
 
             //Retrieve both user's list of preferences from above value
@@ -177,6 +183,12 @@ namespace SCIM
                 case Block.BlockTypes.Service:
                     dest = RouteService(request, firstBlock, toId, fromId);
                     break;
+                case Block.BlockTypes.ConditionOption:
+                    dest = CheckServiceBlock(request, firstBlock.NextBlocks.Values.First(), toId, fromId);
+                    break;
+                case Block.BlockTypes.SIPResponse:
+                    dest = CheckServiceBlock(request, firstBlock.NextBlocks.Values.First(), toId, fromId);
+                    break;
                 default:
                     break;
             }
@@ -185,26 +197,27 @@ namespace SCIM
 
         private static Address RouteService(Message request, Block firstBlock, string toId, string fromId)
         {
-            Address dest = null;
-            Service service = _services[firstBlock.GlobalGUID];
-            return new Address(service.ServiceInformation["Server_URI"]);
+            Address dest = new Address("sip:"+firstBlock.DestURI);
+            return dest;
         }
 
         private static Address MatchCondition(Message request, Block firstBlock, string toId, string fromId)
         {
-            Address dest = null;
             Dictionary<string, Block> conditionValues = firstBlock.NextBlocks;
             // Look up what condition it is (pull out of condition manager)
-            Condition condition = _conditions[firstBlock.GlobalGUID];
-            if (_context[toId].ContainsKey(condition.Type.ToLower()))
+            if (_context.ContainsKey(toId))
             {
-                string conditionOption = _context[toId][condition.Name.ToLower()];
-                if (conditionValues.ContainsKey(conditionOption))
+                if (_context[toId].ContainsKey(firstBlock.ConditionType.ToLower()))
                 {
-                    return CheckServiceBlock(request, conditionValues[conditionOption], toId, fromId);
+                    string conditionOption = _context[toId][firstBlock.ConditionType.ToLower()];
+                    if (conditionValues.ContainsKey(conditionOption))
+                    {
+                        return CheckServiceBlock(request, conditionValues[conditionOption], toId, fromId);
+                    }
                 }
+                return new Address(request.Uri.ToString());
             }
-            return new Address(request.Uri.ToString());
+            else return null;
         }
 
         private static void LoadData()
