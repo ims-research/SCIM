@@ -16,6 +16,7 @@ namespace SCIM
         private static readonly ILog Log = LogManager.GetLogger(typeof(SIPApp));
         private static readonly ILog IMLog = LogManager.GetLogger("SCIMLogger");
         private static Dictionary<String,List<ServiceFlow>> _chains;
+        private static Dictionary<String, ActiveFlow> _activeFlows;
         private static Dictionary<string, Dictionary<string, string>> _context = new Dictionary<string, Dictionary<string, string>>();
 
         
@@ -44,14 +45,38 @@ namespace SCIM
             string requestType = response.First("CSeq").ToString().Trim().Split()[1].ToUpper();
             switch (requestType)
             {
-                case "INVITE":
-                case "REGISTER":
-                case "BYE":
                 default:
                     Log.Info("Response for Request Type " + requestType + " is unhandled ");
+                    Proxy pua = (Proxy)(e.UA);
+                    CheckReceivedResponse(response, pua);
                     break;
             }
         }
+
+        private static void CheckReceivedResponse(Message response, Proxy pua)
+        {
+            string callID = response.First("Call-ID").ToString();
+            if (_activeFlows.ContainsKey(callID))
+            {
+                ActiveFlow af = _activeFlows[callID];
+                Block lastBlock = af.LastBlock;
+                if (lastBlock.NextBlocks.Count > 0)
+                {
+                    ContinueRoutingMessage(af.LastRequest, pua, lastBlock);
+                }
+            }
+            else
+            {
+                RouteNewResponse(response, pua);
+            }
+        }
+
+        private static void RouteNewResponse(Message response, Proxy pua)
+        {
+            Message proxiedResponse = pua.CreateResponse(response.ResponseCode, response.ResponseText);
+            pua.SendResponse(proxiedResponse);
+        }
+
 
         static void AppRequestRecvEvent(object sender, SipMessageEventArgs e)
         {
@@ -62,7 +87,7 @@ namespace SCIM
                 case "INVITE":
                     {
                         Proxy pua = (Proxy)(e.UA);
-                        RouteMessage(request, pua);
+                        CheckReceivedRequest(request, pua);
                         break;
                     }
                 case "MESSAGE":
@@ -119,7 +144,45 @@ namespace SCIM
             return _chains.ContainsKey(id) ? _chains[id] : new List<ServiceFlow>();
         }
 
-        private static void RouteMessage(Message request, Proxy pua)
+        private static void CheckReceivedRequest(Message request, Proxy pua)
+        {
+            string callID = request.First("Call-ID").ToString();
+            if (_activeFlows.ContainsKey(callID))
+            {
+                ActiveFlow af = _activeFlows[callID];
+                Block lastBlock = af.LastBlock;
+                if (lastBlock.NextBlocks.Count > 0)
+                {
+                    ContinueRoutingMessage(request, pua, lastBlock);
+                }
+            }
+            else
+            {
+                RouteNewMessage(request, pua);    
+            }
+        }
+
+        private static void ContinueRoutingMessage(Message request, Proxy pua, Block block)
+        {
+            SIPURI to = request.Uri;
+            string toID = to.User + "@" + to.Host;
+
+            Address from = (Address)(request.First("From").Value);
+            string fromID = from.Uri.User + "@" + from.Uri.Host;
+
+            Address dest = new Address(to.ToString());
+            Address temp_dest = CheckServiceBlock(request, block, toID, fromID);
+            if (temp_dest != null)
+            {
+                dest = temp_dest;
+            }
+            Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
+            proxiedMessage.First("To").Value = dest;
+            pua.SendRequest(proxiedMessage);
+
+        }
+
+        private static void RouteNewMessage(Message request, Proxy pua)
         {
             
             SIPURI to = request.Uri;
@@ -128,8 +191,6 @@ namespace SCIM
             Address from = (Address)(request.First("From").Value);
             string fromID = from.Uri.User + "@" + from.Uri.Host;
 
-            Dictionary<string, string> toUserContext = GetUserContext(toID);
-            Dictionary<string, string> fromUserContext = GetUserContext(fromID);
             List<ServiceFlow> toUserFlows = GetUserBlocks(toID);
             List<ServiceFlow> fromUserFlows = GetUserBlocks(fromID);
 
@@ -149,21 +210,6 @@ namespace SCIM
                 }
                 else continue;
             }
-
-            //Retrieve both user's list of preferences from above value
-            //Check from and to for any matches (check to's list for from, and from's list for to)
-            string method = request.Method;
-            //Check any invites for both parties
-
-            //if found (such as voicemail redirect) do
-            //Address dest = new Address("<sip:voicemail@open-ims.test>");
-            //Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
-            //proxiedMessage.First("To").Value = dest;
-
-            // If not found carry on as usual
-            //Address dest = new Address(to.ToString());
-            //Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
-            //pua.SendRequest(proxiedMessage);
 
             Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
             proxiedMessage.First("To").Value = dest;
@@ -195,10 +241,26 @@ namespace SCIM
             return dest;
         }
 
-        private static Address RouteService(Message request, Block firstBlock, string toId, string fromId)
+        private static Address RouteService(Message request, Block Block, string toId, string fromId)
         {
-            Address dest = new Address("sip:"+firstBlock.DestURI);
+            string callID = request.First("Call-ID").ToString();
+            if (_activeFlows.ContainsKey(callID))
+            {
+                ActiveFlow af = _activeFlows[callID];
+                af.LastRequest = request;
+                af.LastBlock = Block;
+            }
+            else
+            {
+                ActiveFlow af = new ActiveFlow();
+                af.OriginalRequest = request;
+                af.LastRequest = request;
+                af.LastBlock = Block;
+               _activeFlows.Add(callID,af);
+            }
+            Address dest = new Address("sip:" + Block.DestURI);
             return dest;
+            
         }
 
         private static Address MatchCondition(Message request, Block firstBlock, string toId, string fromId)
