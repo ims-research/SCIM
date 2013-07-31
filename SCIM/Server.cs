@@ -6,7 +6,6 @@ using System.Net;
 using LibServiceInfo;
 using SIPLib.SIP;
 using SIPLib.Utils;
-using SIPLib.src.SIP;
 using log4net;
 
 namespace SCIM
@@ -15,8 +14,8 @@ namespace SCIM
     {
         private static readonly ILog Log = LogManager.GetLogger(typeof(SIPApp));
         private static readonly ILog IMLog = LogManager.GetLogger("SCIMLogger");
-        private static Dictionary<String,List<ServiceFlow>> _chains;
-        private static Dictionary<String, ActiveFlow> _activeFlows;
+        private static Dictionary<String,List<ServiceFlow>> _chains = new Dictionary<String,List<ServiceFlow>>();
+        private static Dictionary<String, ActiveFlow> _activeFlows = new Dictionary<String,ActiveFlow>();
         private static Dictionary<string, Dictionary<string, string>> _context = new Dictionary<string, Dictionary<string, string>>();
 
         
@@ -62,7 +61,23 @@ namespace SCIM
                 Block lastBlock = af.LastBlock;
                 if (lastBlock.NextBlocks.Count > 0)
                 {
-                    ContinueRoutingMessage(af.LastRequest, pua, lastBlock);
+                    foreach (string code in lastBlock.NextBlocks.Keys)
+                    {
+                        if ((response.ResponseCode.ToString().Contains("183") && code.Contains("181")) || code.Contains(response.ResponseCode.ToString()))
+                        {
+                            Block NextBlock = lastBlock.NextBlocks[code];
+                            Message newRequest = af.LastRequest;
+                            Header CSeq = newRequest.First("CSeq");
+                            CSeq.Number++;
+                            newRequest.InsertHeader(CSeq);
+                            ContinueRoutingMessage(af.LastRequest, pua, NextBlock);
+                        }
+                    }
+
+                }
+                else
+                {
+                    RouteNewResponse(response, pua);  
                 }
             }
             else
@@ -97,7 +112,7 @@ namespace SCIM
                         e.UA.SendResponse(m);
                         string contentType = request.First("Content-Type").ToString().ToUpper();
                         string to = request.First("To").ToString().ToUpper();
-                        if (to.Contains("SCIM"))
+                        if (to.ToLower().Contains("scim")) ;
                         {
                             ProcessSIPMessage(contentType, e.Message.Body);
                         }
@@ -111,10 +126,11 @@ namespace SCIM
             if (type.Equals("APPLICATION/SERV_DESC+XML"))
             {
                 string[] lines = message.Split('\n');
-                Dictionary<String, List<ServiceFlow>> receivedchains = message.Deserialize<Dictionary<string, List<ServiceFlow>>>();
+                Dictionary<String, List<ServiceFlow>> receivedchains = message.UnzipAndDeserialize<Dictionary<string, List<ServiceFlow>>>();
                 foreach (var src in receivedchains)
                 {
                     _chains[src.Key] = src.Value;
+                    SaveData();
                 }
             }// Fix to use proper application/pidf+xml
             else if (type.Equals("TEXT/PLAIN"))
@@ -129,6 +145,7 @@ namespace SCIM
                     string value = parts[2];
                     if (!_context.ContainsKey(user)) _context[user] = new Dictionary<string, string>();
                     _context[user][contextType] = value;
+                    SaveData();
                 }
             }
             else Log.Error("Unhandled Message type of " + type);
@@ -176,10 +193,17 @@ namespace SCIM
             {
                 dest = temp_dest;
             }
-            Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
-            proxiedMessage.First("To").Value = dest;
-            pua.SendRequest(proxiedMessage);
-
+            if (dest.ToString().Contains("anonymous.invalid"))
+            {
+                Message proxiedMessage = pua.CreateResponse(403, "Forbidden");
+                pua.SendResponse(proxiedMessage);
+            }
+            else
+            {
+                Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
+                proxiedMessage.First("To").Value = dest;
+                pua.SendRequest(proxiedMessage);
+            }
         }
 
         private static void RouteNewMessage(Message request, Proxy pua)
@@ -233,7 +257,11 @@ namespace SCIM
                     dest = CheckServiceBlock(request, firstBlock.NextBlocks.Values.First(), toId, fromId);
                     break;
                 case Block.BlockTypes.SIPResponse:
-                    dest = CheckServiceBlock(request, firstBlock.NextBlocks.Values.First(), toId, fromId);
+                    if (firstBlock.NextBlocks.Count > 0)
+                    {
+                        dest = CheckServiceBlock(request, firstBlock.NextBlocks.Values.First(), toId, fromId);
+                    }
+                    else dest = null;
                     break;
                 default:
                     break;
@@ -258,7 +286,7 @@ namespace SCIM
                 af.LastBlock = Block;
                _activeFlows.Add(callID,af);
             }
-            Address dest = new Address("sip:" + Block.DestURI);
+            Address dest = new Address(Block.DestURI);
             return dest;
             
         }
@@ -291,13 +319,18 @@ namespace SCIM
         private static Dictionary<string, Dictionary<string, string>> LoadContexts(string name)
         {
             string text = System.IO.File.ReadAllText(name);
-            return text.Deserialize<Dictionary<string, Dictionary<string, string>>>();
+            return text.UnzipAndDeserialize<Dictionary<string, Dictionary<string, string>>>();
         }
 
         private static Dictionary<string, List<ServiceFlow>> LoadChains(string name)
         {
             string text = System.IO.File.ReadAllText(name);
-            return text.Deserialize<Dictionary<string, List<ServiceFlow>>>();
+            Dictionary<string, List<ServiceFlow>> temp_chains = text.UnzipAndDeserialize<Dictionary<string, List<ServiceFlow>>>();
+            if (temp_chains == null)
+            {
+                temp_chains = new Dictionary<string, List<ServiceFlow>>();
+            }
+            return temp_chains;
         }
 
         static void Main(string[] args)
@@ -322,11 +355,11 @@ namespace SCIM
         {
             using (StreamWriter outfile = new StreamWriter("chains.dat"))
             {
-                outfile.Write(_chains.Serialize());
+                outfile.Write(_chains.SerializeAndZip());
             }
             using (StreamWriter outfile = new StreamWriter("context.dat"))
             {
-                outfile.Write(_context.Serialize());
+                outfile.Write(_context.SerializeAndZip());
             }
         }
     }

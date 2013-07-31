@@ -5,7 +5,6 @@ using System.Net;
 using System.Net.Sockets;
 using SIPLib.SIP;
 using SIPLib.Utils;
-using SIPLib.src.SIP;
 using log4net;
 using Timer = SIPLib.SIP.Timer;
 
@@ -32,7 +31,7 @@ namespace SCIM
         public SIPApp(TransportInfo transport)
         {
             log4net.Config.XmlConfigurator.Configure();
-            TempBuffer = new byte[20000];
+            TempBuffer = new byte[80000];
             transport.Socket = transport.Type == ProtocolType.Tcp ? new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp) : new Socket(AddressFamily.InterNetwork, SocketType.Dgram, ProtocolType.Udp);
             IPEndPoint localEP = new IPEndPoint(transport.Host, transport.Port);
             transport.Socket.Bind(localEP);
@@ -168,7 +167,7 @@ namespace SCIM
             Log.Debug("\n\n" + response.ToString());
             if (ResponseRecvEvent != null)
             {
-                ResponseRecvEvent(this, new SipMessageEventArgs(response));
+                ResponseRecvEvent(this, new SipMessageEventArgs(response,ua));
             }
         }
 
