@@ -378,11 +378,13 @@ namespace SCIM
         {
             bool show_help = false;
             string ip = null;
+            int port = 5060;
             var p = new OptionSet() {
-            { "i=", "IP address to use", v => ip = v },
+            { "i=", "IP address to use", v => { if (v == null) ip = Helpers.GetLocalIP(); else ip = v;} },
+            { "p=", "port to use", v => { if (v != null) port = Int32.Parse(v);}},
             { "h|help", "Show help and exit", (v) => show_help = v != null }
             };
-
+            //port = 5060; else port = v;
             List<string> extra;
             try
             {
@@ -404,9 +406,10 @@ namespace SCIM
             {
                 ip = Helpers.GetLocalIP();
             }
-            TransportInfo localTransport = CreateTransport(ip, 9000);
+
+            TransportInfo localTransport = CreateTransport(ip, port);
             _app = new SIPApp(localTransport);
-            Log.Info("Starting SCIM on IP " + ip);
+            Log.Info(String.Format("Starting SCIM on ip {0} port {1}",ip,port));
             _app.RequestRecvEvent += new EventHandler<SipMessageEventArgs>(AppRequestRecvEvent);
             _app.ResponseRecvEvent += new EventHandler<SipMessageEventArgs>(AppResponseRecvEvent);
             LoadData();
