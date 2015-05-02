@@ -7,6 +7,7 @@ using LibServiceInfo;
 using SIPLib.SIP;
 using SIPLib.Utils;
 using log4net;
+using Mono.Options;
 
 namespace SCIM
 {
@@ -364,11 +365,48 @@ namespace SCIM
             return temp_chains;
         }
 
+        static void ShowHelp(OptionSet p)
+        {
+            Console.WriteLine("Usage: scim [-i IP ADDRESS]");
+            Console.WriteLine("Starts the SCIM on IP_ADDRESS if specified or attempts to guess local IP");
+            Console.WriteLine();
+            Console.WriteLine("Options:");
+            p.WriteOptionDescriptions(Console.Out);
+        }
+
         static void Main(string[] args)
         {
+            bool show_help = false;
+            string ip = null;
+            var p = new OptionSet() {
+            { "i=", "IP address to use", v => ip = v },
+            { "h|help", "Show help and exit", (v) => show_help = v != null }
+            };
 
-            TransportInfo localTransport = CreateTransport(Helpers.GetLocalIP(), 9000);
+            List<string> extra;
+            try
+            {
+                extra = p.Parse(args);
+            }
+            catch (OptionException e)
+            {
+                Console.WriteLine("Use --help for correct options");
+                return;
+            }
+
+            if (show_help)
+            {
+                ShowHelp(p);
+                return;
+            }
+
+            if (ip == null)
+            {
+                ip = Helpers.GetLocalIP();
+            }
+            TransportInfo localTransport = CreateTransport(ip, 9000);
             _app = new SIPApp(localTransport);
+            Log.Info("Starting SCIM on IP " + ip);
             _app.RequestRecvEvent += new EventHandler<SipMessageEventArgs>(AppRequestRecvEvent);
             _app.ResponseRecvEvent += new EventHandler<SipMessageEventArgs>(AppResponseRecvEvent);
             LoadData();
@@ -378,6 +416,7 @@ namespace SCIM
             //Disable sending to SCSCF first
             SIPStack stack = CreateStack(_app);
             stack.Uri = new SIPURI("scim@open-ims.test");
+            Log.Info("Press any key to exit");
             Console.ReadKey();
             SaveData();
         }
