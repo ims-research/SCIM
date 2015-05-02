@@ -70,7 +70,12 @@ namespace SCIM
                             Header CSeq = newRequest.First("CSeq");
                             CSeq.Number++;
                             newRequest.InsertHeader(CSeq);
-                            ContinueRoutingMessage(af.LastRequest, pua, NextBlock);
+                            RouteNewResponse(response, pua);
+                            if (NextBlock.NextBlocks.Count > 0)
+                            {
+                                ContinueRoutingMessage(newRequest, pua, NextBlock);
+                            }
+                            
                         }
                     }
 
@@ -237,6 +242,9 @@ namespace SCIM
 
             Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
             proxiedMessage.First("To").Value = dest;
+            string callID = proxiedMessage.First("Call-ID").ToString();
+            ActiveFlow af = _activeFlows[callID];
+            af.LastRequest = proxiedMessage;
             pua.SendRequest(proxiedMessage);
             
         }
@@ -261,7 +269,10 @@ namespace SCIM
                     {
                         dest = CheckServiceBlock(request, firstBlock.NextBlocks.Values.First(), toId, fromId);
                     }
-                    else dest = null;
+                    else
+                    {
+                        dest = null;
+                    }
                     break;
                 default:
                     break;
@@ -305,9 +316,22 @@ namespace SCIM
                         return CheckServiceBlock(request, conditionValues[conditionOption], toId, fromId);
                     }
                 }
-                return new Address(request.Uri.ToString());
             }
-            else return null;
+            // Hard coded contact matching for now
+            if (firstBlock.ConditionType.ToLower() == "contact")
+            {
+                if (firstBlock.Name.ToLower() == "calling party")
+                {
+                    foreach (string key in conditionValues.Keys)
+                    {
+                        if (fromId.ToLower().Contains(key.ToLower()))
+                        {
+                            return CheckServiceBlock(request, conditionValues[key], toId, fromId);
+                        }
+                    }
+                }
+            }
+            return new Address(request.Uri.ToString());
         }
 
         private static void LoadData()
@@ -319,7 +343,14 @@ namespace SCIM
         private static Dictionary<string, Dictionary<string, string>> LoadContexts(string name)
         {
             string text = System.IO.File.ReadAllText(name);
-            return text.UnzipAndDeserialize<Dictionary<string, Dictionary<string, string>>>();
+            if (String.IsNullOrEmpty(text))
+            {
+                return new Dictionary<string, Dictionary<string, string>>();
+            }
+            else
+            {
+                return text.UnzipAndDeserialize<Dictionary<string, Dictionary<string, string>>>();
+            }
         }
 
         private static Dictionary<string, List<ServiceFlow>> LoadChains(string name)
