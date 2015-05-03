@@ -1,0 +1,16 @@
+# Automatically abort script on errors
+option batch abort
+# Disable overwrite confirmations that conflict with the previous
+option confirm off
+# Connect
+open sftp://ubuntu@scim.open-ims.test -hostkey="ssh-rsa 2048 63:f5:4e:dd:73:1e:be:f0:95:8e:60:82:7d:ce:19:6e"
+# Change remote directory
+cd /home/ubuntu/code/SCIM/SCIM
+# Force binary mode transfer
+option transfer binary
+# Upload the file to current working directory
+synchronize remote bin/Debug /home/ubuntu/code/SCIM/SCIM/bin/Debug
+# Disconnect
+close
+# Exit WinSCP
+exit

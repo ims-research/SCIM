@@ -3,8 +3,6 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
-    <ProductVersion>8.0.30703</ProductVersion>
-    <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{5F42C1C0-AB5B-47AD-B0CE-0D635E6FF761}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
@@ -40,6 +38,12 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <CustomCommands>
+      <CustomCommands>
+        <Command type="AfterClean" command="misc-scripts\build.bat" workingdir="C:\Users\Dksaarth\Documents\GitHub\SCIM\SCIM" externalConsole="True" pauseExternalConsole="True" />
+        <Command type="Custom" name="start-debug" command="misc-scripts\start-debug.bat" workingdir="C:\Users\Dksaarth\Documents\GitHub\SCIM\SCIM" externalConsole="True" pauseExternalConsole="True" />
+      </CustomCommands>
+    </CustomCommands>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
     <PlatformTarget>x86</PlatformTarget>
@@ -52,10 +56,6 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\C-Sharp-Sip-Lib\SIPLib\lib\log4net.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Runtime.Serialization" />
@@ -64,6 +64,9 @@
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
+    <Reference Include="log4net">
+      <HintPath>..\..\C-Sharp-Sip-Lib\SIPLib\lib\log4net.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ActiveFlow.cs" />
@@ -83,7 +86,7 @@
       <Name>SIPLib</Name>
     </ProjectReference>
     <ProjectReference Include="..\..\LibServiceInfo\LibServiceInfo\LibServiceInfo.csproj">
-      <Project>{9bb306b5-e025-4aab-8b57-ba8dc53503dc}</Project>
+      <Project>{9BB306B5-E025-4AAB-8B57-BA8DC53503DC}</Project>
       <Name>LibServiceInfo</Name>
     </ProjectReference>
   </ItemGroup>

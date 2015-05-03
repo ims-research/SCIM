@@ -1,0 +1,1 @@
+cmd /k ssh ubuntu@scim.open-ims.test -i "C:\Dropbox\PhD related\AWS\aws-ims.rsa" "mono --gc=sgen --debug --debugger-agent=transport=dt_socket,address=0.0.0.0:15060,server=y /home/ubuntu/code/SCIM/SCIM/bin/Debug/SCIM.exe"
