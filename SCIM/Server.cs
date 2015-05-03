@@ -60,7 +60,7 @@ namespace SCIM
             {
                 ActiveFlow af = _activeFlows[callID];
                 Block lastBlock = af.LastBlock;
-                if (lastBlock.NextBlocks.Count > 0)
+                if (lastBlock != null && lastBlock.NextBlocks.Count > 0)
                 {
                     foreach (string code in lastBlock.NextBlocks.Keys)
                     {
@@ -244,10 +244,10 @@ namespace SCIM
             Message proxiedMessage = pua.CreateRequest(request.Method, dest, true, true);
             proxiedMessage.First("To").Value = dest;
             string callID = proxiedMessage.First("Call-ID").ToString();
-            ActiveFlow af = _activeFlows[callID];
+            ActiveFlow af = new ActiveFlow ();
             af.LastRequest = proxiedMessage;
+            _activeFlows[callID] = af;
             pua.SendRequest(proxiedMessage);
-            
         }
 
         private static Address CheckServiceBlock(Message request, Block firstBlock, string toId, string fromId)
